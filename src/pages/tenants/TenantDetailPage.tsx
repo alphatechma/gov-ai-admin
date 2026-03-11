@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
@@ -7,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Switch } from '@/components/ui/switch'
 import { Skeleton } from '@/components/ui/skeleton'
-import { ArrowLeft, Pencil, Trash2, Shield, Puzzle, Users, Lock } from 'lucide-react'
+import { ArrowLeft, Pencil, Trash2, Shield, Puzzle, Users, Lock, Database, Loader2, AlertTriangle } from 'lucide-react'
 import { PROFILE_LABELS, ROLE_LABELS } from '@/types'
 import type { Tenant, AvailableModule, User } from '@/types'
 import { formatDate } from '@/lib/utils'
@@ -36,10 +37,30 @@ const CATEGORY_COLORS: Record<string, string> = {
   INTELIGENCIA: 'bg-indigo-100 text-indigo-700',
 }
 
+const MODULE_DATA_LABELS: Record<string, string> = {
+  voters: 'Eleitores',
+  leaders: 'Lideranças',
+  visits: 'Visitas',
+  'help-records': 'Atendimentos',
+  tasks: 'Tarefas',
+  agenda: 'Agenda',
+  staff: 'Equipe',
+  projects: 'Projetos de Lei',
+  bills: 'Proposições',
+  amendments: 'Emendas',
+  'voting-records': 'Votações',
+  'political-contacts': 'Rede Política',
+  ceap: 'Cota Parlamentar',
+  'executive-requests': 'Pedidos ao Executivo',
+  chat: 'Chat',
+  whatsapp: 'WhatsApp',
+}
+
 export function TenantDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const qc = useQueryClient()
+  const [deletingModule, setDeletingModule] = useState<string | null>(null)
 
   const tenant = useQuery({
     queryKey: ['tenant', id],
@@ -58,12 +79,29 @@ export function TenantDetailPage() {
     enabled: !!id,
   })
 
+  const dataCounts = useQuery({
+    queryKey: ['tenant-data-counts', id],
+    queryFn: () => api.get<Record<string, number>>(`/tenants/${id}/module-data-counts`).then((r) => r.data),
+    enabled: !!id,
+  })
+
   const toggleModule = useMutation({
     mutationFn: ({ moduleKey, enabled }: { moduleKey: string; enabled: boolean }) =>
       api.post(`/modules/tenant/${id}/toggle`, { moduleKey, enabled }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['tenant-modules-available', id] })
       qc.invalidateQueries({ queryKey: ['tenant', id] })
+    },
+  })
+
+  const deleteModuleData = useMutation({
+    mutationFn: (moduleKey: string) => api.delete(`/tenants/${id}/modules/${moduleKey}/data`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['tenant-data-counts', id] })
+      setDeletingModule(null)
+    },
+    onError: () => {
+      setDeletingModule(null)
     },
   })
 
@@ -118,6 +156,7 @@ export function TenantDetailPage() {
           <TabsTrigger value="info"><Shield className="h-4 w-4 mr-1" />Informações</TabsTrigger>
           <TabsTrigger value="modules"><Puzzle className="h-4 w-4 mr-1" />Módulos</TabsTrigger>
           <TabsTrigger value="users"><Users className="h-4 w-4 mr-1" />Usuários</TabsTrigger>
+          <TabsTrigger value="data"><Database className="h-4 w-4 mr-1" />Dados</TabsTrigger>
         </TabsList>
 
         {/* INFO TAB */}
@@ -233,6 +272,60 @@ export function TenantDetailPage() {
                   )}
                 </tbody>
               </table>
+            </div>
+          )}
+        </TabsContent>
+
+        {/* DATA TAB */}
+        <TabsContent value="data" className="space-y-4">
+          <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4">
+            <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium text-amber-800">Atenção: esta ação é irreversível</p>
+              <p className="text-sm text-amber-700">
+                Ao excluir os dados de um módulo, todos os registros serão permanentemente removidos.
+              </p>
+            </div>
+          </div>
+
+          {dataCounts.isLoading ? (
+            <div className="space-y-2">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-16" />)}</div>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {Object.entries(MODULE_DATA_LABELS).map(([moduleKey, label]) => {
+                const count = dataCounts.data?.[moduleKey] ?? 0
+                const isDeleting = deletingModule === moduleKey && deleteModuleData.isPending
+                return (
+                  <Card key={moduleKey}>
+                    <CardContent className="flex items-center justify-between p-4">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium">{label}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {count} {count === 1 ? 'registro' : 'registros'}
+                        </p>
+                      </div>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        disabled={count === 0 || isDeleting}
+                        onClick={() => {
+                          if (confirm(`Tem certeza que deseja excluir TODOS os dados de "${label}" deste tenant? Esta ação não pode ser desfeita.`)) {
+                            setDeletingModule(moduleKey)
+                            deleteModuleData.mutate(moduleKey)
+                          }
+                        }}
+                      >
+                        {isDeleting ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-4 w-4" />
+                        )}
+                        Excluir
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )
+              })}
             </div>
           )}
         </TabsContent>
