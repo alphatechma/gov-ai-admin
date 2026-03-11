@@ -1,11 +1,11 @@
-import { useState, useCallback } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Upload, Trash2, FileArchive, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { Upload, Trash2, FileArchive, AlertCircle, CheckCircle2, Info } from 'lucide-react'
 
 const ELECTION_API = import.meta.env.VITE_ELECTION_API_URL || '/election-api'
 
@@ -39,15 +39,22 @@ interface ImportResult {
   cargosFound: string[]
 }
 
+// Anos municipais: divisiveis por 4 (2024, 2020, 2016...)
+// Anos estaduais/federais: ano par nao divisivel por 4 (2022, 2018, 2014...)
+function isMunicipalYear(year: number): boolean {
+  return year % 4 === 0
+}
+
 export function ElectionsImportPage() {
   const queryClient = useQueryClient()
 
   const [year, setYear] = useState('2024')
   const [state, setState] = useState('')
   const [municipality, setMunicipality] = useState('')
-  const [round, setRound] = useState('1')
   const [file, setFile] = useState<File | null>(null)
   const [dragOver, setDragOver] = useState(false)
+
+  const isMunicipal = useMemo(() => isMunicipalYear(parseInt(year, 10)), [year])
 
   // Buscar eleicoes importadas
   const { data: elections, isLoading: loadingElections } = useQuery<Election[]>({
@@ -55,26 +62,30 @@ export function ElectionsImportPage() {
     queryFn: () => axios.get(`${ELECTION_API}/elections`).then(r => r.data),
   })
 
-  // Buscar municipios quando estado for selecionado
+  // Buscar municipios quando estado for selecionado (so para anos municipais)
   const { data: municipalities, isLoading: loadingMunicipalities } = useQuery<Municipality[]>({
     queryKey: ['municipalities', state],
     queryFn: () => axios.get(`${ELECTION_API}/elections/tse/municipalities/${state}`).then(r => r.data),
-    enabled: !!state,
+    enabled: !!state && isMunicipal,
   })
 
   // Mutation de importacao
   const importMutation = useMutation<ImportResult, Error>({
     mutationFn: async () => {
-      if (!file || !state || !municipality || !year) {
+      if (!file || !state || !year) {
         throw new Error('Preencha todos os campos')
+      }
+      if (isMunicipal && !municipality) {
+        throw new Error('Selecione o municipio para eleicoes municipais')
       }
 
       const formData = new FormData()
       formData.append('file', file)
       formData.append('year', year)
       formData.append('state', state)
-      formData.append('municipalityName', municipality)
-      formData.append('round', round)
+      if (isMunicipal && municipality) {
+        formData.append('municipalityName', municipality)
+      }
 
       const { data } = await axios.post(`${ELECTION_API}/elections/import/upload`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
@@ -132,6 +143,8 @@ export function ElectionsImportPage() {
 
   const years = Array.from({ length: 10 }, (_, i) => String(2024 - i * 2))
 
+  const canImport = file && state && year && (isMunicipal ? !!municipality : true)
+
   return (
     <div className="space-y-6">
       <div>
@@ -147,11 +160,15 @@ export function ElectionsImportPage() {
           <CardTitle className="text-lg">Importar ZIP do TSE</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <div>
               <label className="mb-1 block text-sm font-medium">Ano</label>
-              <Select value={year} onChange={e => setYear(e.target.value)}>
-                {years.map(y => <option key={y} value={y}>{y}</option>)}
+              <Select value={year} onChange={e => { setYear(e.target.value); setMunicipality('') }}>
+                {years.map(y => (
+                  <option key={y} value={y}>
+                    {y} — {isMunicipalYear(parseInt(y, 10)) ? 'Municipal' : 'Estadual/Federal'}
+                  </option>
+                ))}
               </Select>
             </div>
             <div>
@@ -161,28 +178,41 @@ export function ElectionsImportPage() {
                 {UF_LIST.map(uf => <option key={uf} value={uf}>{uf}</option>)}
               </Select>
             </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium">Municipio</label>
-              <Select
-                value={municipality}
-                onChange={e => setMunicipality(e.target.value)}
-                disabled={!state || loadingMunicipalities}
-              >
-                <option value="">
-                  {loadingMunicipalities ? 'Carregando...' : 'Selecione...'}
-                </option>
-                {municipalities?.map(m => (
-                  <option key={m.name} value={m.name}>{m.name}</option>
-                ))}
-              </Select>
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium">Turno</label>
-              <Select value={round} onChange={e => setRound(e.target.value)}>
-                <option value="1">1o Turno</option>
-                <option value="2">2o Turno</option>
-              </Select>
-            </div>
+            {isMunicipal && (
+              <div>
+                <label className="mb-1 block text-sm font-medium">Municipio</label>
+                <Select
+                  value={municipality}
+                  onChange={e => setMunicipality(e.target.value)}
+                  disabled={!state || loadingMunicipalities}
+                >
+                  <option value="">
+                    {loadingMunicipalities ? 'Carregando...' : 'Selecione...'}
+                  </option>
+                  {municipalities?.map(m => (
+                    <option key={m.name} value={m.name}>{m.name}</option>
+                  ))}
+                </Select>
+              </div>
+            )}
+          </div>
+
+          {/* Info banner */}
+          <div className="flex items-start gap-2 rounded-lg border bg-muted/50 p-3 text-sm text-muted-foreground">
+            <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
+            {isMunicipal ? (
+              <p>
+                Eleicao municipal ({year}): os dados serao filtrados pelo municipio selecionado.
+                Cargos esperados: <strong>Prefeito</strong> e <strong>Vereador</strong>.
+                O turno e detectado automaticamente do CSV.
+              </p>
+            ) : (
+              <p>
+                Eleicao estadual/federal ({year}): todos os votos do estado serao importados (visao geral).
+                Cargos esperados: <strong>Deputado Estadual</strong>, <strong>Deputado Federal</strong>, <strong>Senador</strong> e <strong>Governador</strong>.
+                O turno e detectado automaticamente do CSV.
+              </p>
+            )}
           </div>
 
           {/* Drop zone */}
@@ -236,7 +266,7 @@ export function ElectionsImportPage() {
           <div className="flex items-center gap-4">
             <button
               onClick={() => importMutation.mutate()}
-              disabled={!file || !state || !municipality || importMutation.isPending}
+              disabled={!canImport || importMutation.isPending}
               className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               {importMutation.isPending ? (
@@ -254,7 +284,9 @@ export function ElectionsImportPage() {
 
             {importMutation.isPending && (
               <p className="text-sm text-muted-foreground">
-                Isso pode levar alguns minutos dependendo do tamanho do arquivo...
+                {isMunicipal
+                  ? 'Isso pode levar alguns minutos dependendo do tamanho do arquivo...'
+                  : 'Importando todos os municipios do estado. Isso pode levar varios minutos...'}
               </p>
             )}
           </div>
@@ -268,7 +300,7 @@ export function ElectionsImportPage() {
               </div>
               <p className="text-sm text-green-700 dark:text-green-300">
                 {importMutation.data.totalImported.toLocaleString('pt-BR')} registros importados
-                {importMutation.data.totalSkipped > 0 && `, ${importMutation.data.totalSkipped.toLocaleString('pt-BR')} ignorados`}
+                {importMutation.data.totalSkipped > 0 && `, ${importMutation.data.totalSkipped.toLocaleString('pt-BR')} atualizados`}
               </p>
               <div className="mt-2 flex flex-wrap gap-2">
                 {importMutation.data.elections.map(e => (
@@ -307,39 +339,44 @@ export function ElectionsImportPage() {
             <p className="text-sm text-muted-foreground">Nenhuma eleicao importada ainda</p>
           ) : (
             <div className="space-y-2">
-              {elections.map(el => (
-                <div
-                  key={el.id}
-                  className="flex items-center justify-between rounded-lg border p-4"
-                >
-                  <div className="flex items-center gap-4">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium">
-                          {el.year} {typeLabel(el.type)} — {el.city}/{el.state}
-                        </p>
-                        <Badge variant="secondary">{el.round}o turno</Badge>
-                      </div>
-                      <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
-                        <Badge variant="outline">{cargoLabel(el.cargo)}</Badge>
-                        <span>{el.totalRecords.toLocaleString('pt-BR')} registros</span>
-                        <span>{el.totalCandidates} candidatos</span>
+              {elections.map(el => {
+                const isStateWide = el.type === 'estadual_federal'
+                const cityDisplay = isStateWide ? `${el.state} (Estado)` : `${el.city}/${el.state}`
+
+                return (
+                  <div
+                    key={el.id}
+                    className="flex items-center justify-between rounded-lg border p-4"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium">
+                            {el.year} {typeLabel(el.type)} — {cityDisplay}
+                          </p>
+                          {el.round > 1 && <Badge variant="secondary">{el.round}o turno</Badge>}
+                        </div>
+                        <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
+                          <Badge variant="outline">{cargoLabel(el.cargo)}</Badge>
+                          <span>{el.totalRecords.toLocaleString('pt-BR')} registros</span>
+                          <span>{el.totalCandidates} candidatos</span>
+                        </div>
                       </div>
                     </div>
+                    <button
+                      onClick={() => {
+                        if (confirm(`Remover "${cargoLabel(el.cargo)} ${cityDisplay} ${el.year}"?`)) {
+                          deleteMutation.mutate(el.id)
+                        }
+                      }}
+                      disabled={deleteMutation.isPending}
+                      className="rounded p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive cursor-pointer"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                   </div>
-                  <button
-                    onClick={() => {
-                      if (confirm(`Remover "${cargoLabel(el.cargo)} ${el.city}/${el.state} ${el.year}"?`)) {
-                        deleteMutation.mutate(el.id)
-                      }
-                    }}
-                    disabled={deleteMutation.isPending}
-                    className="rounded p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive cursor-pointer"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </CardContent>
