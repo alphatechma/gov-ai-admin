@@ -51,6 +51,13 @@ export interface Tenant {
   state: string
   city: string | null
   logoUrl: string | null
+  bannerUrl: string | null
+  faviconUrl: string | null
+  appName: string | null
+  primaryColor: string | null
+  primaryColorDark: string | null
+  loginBgColor: string | null
+  loginBgColorEnd: string | null
   active: boolean
   planId: string | null
   plan?: Plan

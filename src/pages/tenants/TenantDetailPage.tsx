@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Switch } from '@/components/ui/switch'
 import { Skeleton } from '@/components/ui/skeleton'
-import { ArrowLeft, Pencil, Trash2, Shield, Puzzle, Users, Lock, Database, Loader2, AlertTriangle } from 'lucide-react'
+import { ArrowLeft, Pencil, Trash2, Shield, Puzzle, Users, Lock, Database, Loader2, AlertTriangle, Palette } from 'lucide-react'
 import { PROFILE_LABELS, ROLE_LABELS } from '@/types'
 import type { Tenant, AvailableModule, User } from '@/types'
 import { formatDate } from '@/lib/utils'
@@ -156,6 +156,7 @@ export function TenantDetailPage() {
           <TabsTrigger value="info"><Shield className="h-4 w-4 mr-1" />Informações</TabsTrigger>
           <TabsTrigger value="modules"><Puzzle className="h-4 w-4 mr-1" />Módulos</TabsTrigger>
           <TabsTrigger value="users"><Users className="h-4 w-4 mr-1" />Usuários</TabsTrigger>
+          <TabsTrigger value="branding"><Palette className="h-4 w-4 mr-1" />Branding</TabsTrigger>
           <TabsTrigger value="data"><Database className="h-4 w-4 mr-1" />Dados</TabsTrigger>
         </TabsList>
 
@@ -274,6 +275,75 @@ export function TenantDetailPage() {
               </table>
             </div>
           )}
+        </TabsContent>
+
+        {/* BRANDING TAB */}
+        <TabsContent value="branding">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Nome do Sistema</CardTitle></CardHeader>
+              <CardContent><p className="text-sm font-medium">{t.appName || 'GoverneAI (padrão)'}</p></CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Cor Primária</CardTitle></CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-2">
+                  {t.primaryColor ? (
+                    <>
+                      <div className="h-6 w-6 rounded border" style={{ backgroundColor: t.primaryColor }} />
+                      <span className="text-sm font-mono">{t.primaryColor}</span>
+                    </>
+                  ) : (
+                    <span className="text-sm text-muted-foreground">Padrão</span>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Cor Primária Dark</CardTitle></CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-2">
+                  {t.primaryColorDark ? (
+                    <>
+                      <div className="h-6 w-6 rounded border" style={{ backgroundColor: t.primaryColorDark }} />
+                      <span className="text-sm font-mono">{t.primaryColorDark}</span>
+                    </>
+                  ) : (
+                    <span className="text-sm text-muted-foreground">Padrão</span>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+            {t.logoUrl && (
+              <Card>
+                <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Logo</CardTitle></CardHeader>
+                <CardContent>
+                  <img src={t.logoUrl} alt="Logo" className="h-16 w-16 rounded-lg object-contain border bg-muted p-1" />
+                </CardContent>
+              </Card>
+            )}
+            {t.bannerUrl && (
+              <Card>
+                <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Banner</CardTitle></CardHeader>
+                <CardContent>
+                  <img src={t.bannerUrl} alt="Banner" className="h-16 w-32 rounded-lg object-cover border" />
+                </CardContent>
+              </Card>
+            )}
+            {(t.loginBgColor || t.loginBgColorEnd) && (
+              <Card>
+                <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Gradiente Login</CardTitle></CardHeader>
+                <CardContent>
+                  <div
+                    className="h-16 w-32 rounded-lg"
+                    style={{
+                      background: `linear-gradient(to bottom, ${t.loginBgColor || '#0f3285'}, ${t.loginBgColorEnd || '#0a2460'})`,
+                    }}
+                  />
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </TabsContent>
 
         {/* DATA TAB */}

@@ -29,6 +29,11 @@ export function TenantFormPage() {
     logoUrl: '',
     planId: '',
     active: true,
+    appName: '',
+    primaryColor: '',
+    primaryColorDark: '',
+    loginBgColor: '',
+    loginBgColorEnd: '',
   })
 
   const tenant = useQuery({
@@ -54,6 +59,11 @@ export function TenantFormPage() {
         logoUrl: tenant.data.logoUrl ?? '',
         planId: tenant.data.planId ?? '',
         active: tenant.data.active,
+        appName: tenant.data.appName ?? '',
+        primaryColor: tenant.data.primaryColor ?? '',
+        primaryColorDark: tenant.data.primaryColorDark ?? '',
+        loginBgColor: tenant.data.loginBgColor ?? '',
+        loginBgColorEnd: tenant.data.loginBgColorEnd ?? '',
       })
     }
   }, [tenant.data])
@@ -71,6 +81,11 @@ export function TenantFormPage() {
       if (form.logoUrl) payload.logoUrl = form.logoUrl
       if (form.planId) payload.planId = form.planId
       if (isEdit) payload.active = form.active
+      if (form.appName) payload.appName = form.appName
+      if (form.primaryColor) payload.primaryColor = form.primaryColor
+      if (form.primaryColorDark) payload.primaryColorDark = form.primaryColorDark
+      if (form.loginBgColor) payload.loginBgColor = form.loginBgColor
+      if (form.loginBgColorEnd) payload.loginBgColorEnd = form.loginBgColorEnd
       return isEdit
         ? api.patch(`/tenants/${id}`, payload)
         : api.post('/tenants', payload)
@@ -136,6 +151,32 @@ export function TenantFormPage() {
             <div className="space-y-2">
               <label className="text-sm font-medium">Cidade</label>
               <Input value={form.city} onChange={(e) => set('city', e.target.value)} />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle>Personalização / Branding</CardTitle></CardHeader>
+          <CardContent className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Nome do Sistema</label>
+              <Input value={form.appName} onChange={(e) => set('appName', e.target.value)} placeholder="GoverneAI" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Cor Primária (hex)</label>
+              <Input value={form.primaryColor} onChange={(e) => set('primaryColor', e.target.value)} placeholder="#1a56db" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Cor Primária Dark (hex)</label>
+              <Input value={form.primaryColorDark} onChange={(e) => set('primaryColorDark', e.target.value)} placeholder="#3b82f6" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Gradiente Login (início)</label>
+              <Input value={form.loginBgColor} onChange={(e) => set('loginBgColor', e.target.value)} placeholder="#0f3285" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Gradiente Login (fim)</label>
+              <Input value={form.loginBgColorEnd} onChange={(e) => set('loginBgColorEnd', e.target.value)} placeholder="#0a2460" />
             </div>
           </CardContent>
         </Card>
