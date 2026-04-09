@@ -1,8 +1,18 @@
-import { useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import api from '@/lib/api'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Building2, Users, Puzzle, CreditCard } from 'lucide-react'
+import { Building2, Users, Puzzle, CreditCard, LogOut, Loader2, AlertTriangle } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import type { Tenant, User, Plan, SystemModule } from '@/types'
 
 function StatCard({ label, value, icon: Icon, isLoading }: { label: string; value: number; icon: React.ElementType; isLoading: boolean }) {
@@ -29,11 +39,36 @@ export function DashboardPage() {
 
   const loading = tenants.isLoading || users.isLoading || plans.isLoading || modules.isLoading
 
+  const [kickDialogOpen, setKickDialogOpen] = useState(false)
+  const [kickResult, setKickResult] = useState<{ affected: number } | null>(null)
+
+  const kickAllMutation = useMutation({
+    mutationFn: () =>
+      api
+        .post<{ affected: number; sessionsValidAfter: string }>('/auth/sessions/kick-all')
+        .then((r) => r.data),
+    onSuccess: (data) => {
+      setKickResult({ affected: data.affected })
+    },
+  })
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-        <p className="text-sm text-muted-foreground">Visão geral da plataforma</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">Dashboard</h1>
+          <p className="text-sm text-muted-foreground">Visão geral da plataforma</p>
+        </div>
+        <Button
+          variant="destructive"
+          onClick={() => {
+            setKickResult(null)
+            setKickDialogOpen(true)
+          }}
+        >
+          <LogOut className="h-4 w-4" />
+          Derrubar Sessões
+        </Button>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -76,6 +111,85 @@ export function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Dialog
+        open={kickDialogOpen}
+        onOpenChange={(open) => {
+          setKickDialogOpen(open)
+          if (!open) {
+            setKickResult(null)
+            kickAllMutation.reset()
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Derrubar todas as sessões
+            </DialogTitle>
+            <DialogDescription>
+              Todos os usuários da plataforma serão deslogados e precisarão fazer login
+              novamente. Use esta ação após subir uma nova versão para garantir que as
+              mudanças sejam aplicadas imediatamente.
+            </DialogDescription>
+          </DialogHeader>
+
+          {kickResult ? (
+            <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800">
+              <p className="font-medium">Sessões derrubadas com sucesso</p>
+              <p className="text-green-700">
+                <strong>{kickResult.affected}</strong>{' '}
+                {kickResult.affected === 1 ? 'usuário foi' : 'usuários foram'} deslogado
+                {kickResult.affected === 1 ? '' : 's'}. Sua sessão foi preservada.
+              </p>
+            </div>
+          ) : (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+              <p className="font-medium">Esta ação é imediata e irreversível</p>
+              <p className="text-amber-700">
+                Sua sessão atual será preservada, mas todos os outros usuários serão
+                forçados a fazer login novamente.
+              </p>
+            </div>
+          )}
+
+          <DialogFooter>
+            {kickResult ? (
+              <Button variant="outline" onClick={() => setKickDialogOpen(false)}>
+                Fechar
+              </Button>
+            ) : (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => setKickDialogOpen(false)}
+                  disabled={kickAllMutation.isPending}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => kickAllMutation.mutate()}
+                  disabled={kickAllMutation.isPending}
+                >
+                  {kickAllMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Derrubando...
+                    </>
+                  ) : (
+                    <>
+                      <LogOut className="h-4 w-4" />
+                      Confirmar
+                    </>
+                  )}
+                </Button>
+              </>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
