@@ -8,7 +8,40 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Switch } from '@/components/ui/switch'
 import { Skeleton } from '@/components/ui/skeleton'
-import { ArrowLeft, Pencil, Trash2, Shield, Puzzle, Users, Lock, Database, Loader2, AlertTriangle, Palette } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
+import {
+  Select,
+} from '@/components/ui/select'
+import {
+  ArrowLeft,
+  Pencil,
+  Trash2,
+  Shield,
+  Puzzle,
+  Users,
+  Lock,
+  Database,
+  Loader2,
+  AlertTriangle,
+  Palette,
+  Megaphone,
+  Plus,
+  Send,
+  XCircle,
+  Clock,
+  Gauge,
+  CheckCircle2,
+  Timer,
+} from 'lucide-react'
 import { PROFILE_LABELS, ROLE_LABELS } from '@/types'
 import type { Tenant, AvailableModule, User } from '@/types'
 import { formatDate } from '@/lib/utils'
@@ -56,11 +89,47 @@ const MODULE_DATA_LABELS: Record<string, string> = {
   whatsapp: 'WhatsApp',
 }
 
+interface Broadcast {
+  id: string
+  title: string
+  description?: string
+  sent: number
+  failed: number
+  pending: number
+  speed?: string
+  successRate?: number
+  estimatedTime?: string
+  status: 'ACTIVE' | 'PAUSED' | 'FINISHED'
+  createdAt: string
+}
+
+const BROADCAST_STATUS_LABELS: Record<string, string> = {
+  ACTIVE: 'Ativa',
+  PAUSED: 'Pausada',
+  FINISHED: 'Finalizada',
+}
+
+const BROADCAST_STATUS_VARIANTS: Record<string, 'success' | 'warning' | 'secondary'> = {
+  ACTIVE: 'success',
+  PAUSED: 'warning',
+  FINISHED: 'secondary',
+}
+
 export function TenantDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const qc = useQueryClient()
   const [deletingModule, setDeletingModule] = useState<string | null>(null)
+
+  // Broadcasts state
+  const [showNewCampaign, setShowNewCampaign] = useState(false)
+  const [newTitle, setNewTitle] = useState('')
+  const [newDesc, setNewDesc] = useState('')
+  const [editingBroadcast, setEditingBroadcast] = useState<Broadcast | null>(null)
+  const [metricsForm, setMetricsForm] = useState({
+    sent: 0, failed: 0, pending: 0,
+    speed: '', successRate: '', estimatedTime: '', status: 'ACTIVE',
+  })
 
   const tenant = useQuery({
     queryKey: ['tenant', id],
@@ -110,6 +179,39 @@ export function TenantDetailPage() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['tenants'] }); navigate('/tenants') },
   })
 
+  // Broadcasts queries & mutations
+  const broadcasts = useQuery({
+    queryKey: ['tenant-broadcasts', id],
+    queryFn: () => api.get<Broadcast[]>(`/admin/tenants/${id}/broadcasts`).then((r) => r.data),
+    enabled: !!id,
+  })
+
+  const createBroadcast = useMutation({
+    mutationFn: (dto: { title: string; description?: string }) =>
+      api.post(`/admin/tenants/${id}/broadcasts`, dto),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['tenant-broadcasts', id] })
+      setShowNewCampaign(false)
+      setNewTitle('')
+      setNewDesc('')
+    },
+  })
+
+  const updateBroadcast = useMutation({
+    mutationFn: ({ broadcastId, dto }: { broadcastId: string; dto: object }) =>
+      api.patch(`/admin/tenants/${id}/broadcasts/${broadcastId}`, dto),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['tenant-broadcasts', id] })
+      setEditingBroadcast(null)
+    },
+  })
+
+  const deleteBroadcast = useMutation({
+    mutationFn: (broadcastId: string) =>
+      api.delete(`/admin/tenants/${id}/broadcasts/${broadcastId}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['tenant-broadcasts', id] }),
+  })
+
   if (tenant.isLoading) return <div className="space-y-4">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-32" />)}</div>
 
   const t = tenant.data
@@ -157,6 +259,7 @@ export function TenantDetailPage() {
           <TabsTrigger value="modules"><Puzzle className="h-4 w-4 mr-1" />Módulos</TabsTrigger>
           <TabsTrigger value="users"><Users className="h-4 w-4 mr-1" />Usuários</TabsTrigger>
           <TabsTrigger value="branding"><Palette className="h-4 w-4 mr-1" />Branding</TabsTrigger>
+          <TabsTrigger value="broadcasts"><Megaphone className="h-4 w-4 mr-1" />Disparos</TabsTrigger>
           <TabsTrigger value="data"><Database className="h-4 w-4 mr-1" />Dados</TabsTrigger>
         </TabsList>
 
@@ -399,6 +502,229 @@ export function TenantDetailPage() {
             </div>
           )}
         </TabsContent>
+
+        {/* BROADCASTS TAB */}
+        <TabsContent value="broadcasts" className="space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              Gerencie campanhas de disparo e atualize as métricas manualmente.
+            </p>
+            <Button size="sm" onClick={() => setShowNewCampaign(true)}>
+              <Plus className="h-4 w-4 mr-1" />Nova Campanha
+            </Button>
+          </div>
+
+          {broadcasts.isLoading ? (
+            <div className="space-y-2">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-28" />)}</div>
+          ) : broadcasts.data?.length === 0 ? (
+            <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-10 text-center">
+              <Megaphone className="h-10 w-10 text-muted-foreground mb-3" />
+              <p className="text-sm font-medium">Nenhuma campanha cadastrada</p>
+              <p className="text-xs text-muted-foreground mt-1">Clique em "Nova Campanha" para começar.</p>
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {(broadcasts.data ?? []).map((b) => (
+                <Card key={b.id}>
+                  <CardHeader className="pb-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <CardTitle className="text-base truncate">{b.title}</CardTitle>
+                        {b.description && (
+                          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{b.description}</p>
+                        )}
+                      </div>
+                      <Badge variant={BROADCAST_STATUS_VARIANTS[b.status] ?? 'secondary'}>
+                        {BROADCAST_STATUS_LABELS[b.status] ?? b.status}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="grid grid-cols-3 gap-2 text-center">
+                      <div className="rounded-md bg-muted p-2">
+                        <Send className="h-3.5 w-3.5 mx-auto mb-1 text-blue-500" />
+                        <p className="text-xs text-muted-foreground">Enviadas</p>
+                        <p className="font-semibold text-sm">{b.sent.toLocaleString()}</p>
+                      </div>
+                      <div className="rounded-md bg-muted p-2">
+                        <XCircle className="h-3.5 w-3.5 mx-auto mb-1 text-red-500" />
+                        <p className="text-xs text-muted-foreground">Falhas</p>
+                        <p className="font-semibold text-sm">{b.failed.toLocaleString()}</p>
+                      </div>
+                      <div className="rounded-md bg-muted p-2">
+                        <Clock className="h-3.5 w-3.5 mx-auto mb-1 text-amber-500" />
+                        <p className="text-xs text-muted-foreground">Pendentes</p>
+                        <p className="font-semibold text-sm">{b.pending.toLocaleString()}</p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 text-center">
+                      <div className="rounded-md bg-muted p-2">
+                        <Gauge className="h-3.5 w-3.5 mx-auto mb-1 text-purple-500" />
+                        <p className="text-xs text-muted-foreground">Velocidade</p>
+                        <p className="font-semibold text-xs">{b.speed || '—'}</p>
+                      </div>
+                      <div className="rounded-md bg-muted p-2">
+                        <CheckCircle2 className="h-3.5 w-3.5 mx-auto mb-1 text-green-500" />
+                        <p className="text-xs text-muted-foreground">Sucesso</p>
+                        <p className="font-semibold text-sm">{b.successRate != null ? `${b.successRate}%` : '—'}</p>
+                      </div>
+                      <div className="rounded-md bg-muted p-2">
+                        <Timer className="h-3.5 w-3.5 mx-auto mb-1 text-indigo-500" />
+                        <p className="text-xs text-muted-foreground">Est.</p>
+                        <p className="font-semibold text-xs">{b.estimatedTime || '—'}</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 pt-1">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => {
+                          setEditingBroadcast(b)
+                          setMetricsForm({
+                            sent: b.sent,
+                            failed: b.failed,
+                            pending: b.pending,
+                            speed: b.speed ?? '',
+                            successRate: b.successRate != null ? String(b.successRate) : '',
+                            estimatedTime: b.estimatedTime ?? '',
+                            status: b.status,
+                          })
+                        }}
+                      >
+                        <Pencil className="h-3.5 w-3.5 mr-1" />Editar Métricas
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => {
+                          if (confirm(`Excluir a campanha "${b.title}"?`)) {
+                            deleteBroadcast.mutate(b.id)
+                          }
+                        }}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* DIALOG — Nova Campanha */}
+        <Dialog open={showNewCampaign} onOpenChange={setShowNewCampaign}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Nova Campanha</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="camp-title">Título *</Label>
+                <Input
+                  id="camp-title"
+                  value={newTitle}
+                  onChange={(e) => setNewTitle(e.target.value)}
+                  placeholder="Ex: Campanha Junho 2025"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="camp-desc">Descrição (opcional)</Label>
+                <Textarea
+                  id="camp-desc"
+                  value={newDesc}
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setNewDesc(e.target.value)}
+                  placeholder="Descreva o objetivo desta campanha..."
+                  rows={3}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowNewCampaign(false)}>Cancelar</Button>
+              <Button
+                disabled={!newTitle.trim() || createBroadcast.isPending}
+                onClick={() => createBroadcast.mutate({ title: newTitle.trim(), description: newDesc.trim() || undefined })}
+              >
+                {createBroadcast.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Criar Campanha
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* DIALOG — Editar Métricas */}
+        <Dialog open={!!editingBroadcast} onOpenChange={(o) => { if (!o) setEditingBroadcast(null) }}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Editar Métricas — {editingBroadcast?.title}</DialogTitle>
+            </DialogHeader>
+            <div className="grid grid-cols-2 gap-4 py-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="m-sent">Enviadas</Label>
+                <Input id="m-sent" type="number" min={0} value={metricsForm.sent}
+                  onChange={(e) => setMetricsForm((f) => ({ ...f, sent: Number(e.target.value) }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="m-failed">Falhas</Label>
+                <Input id="m-failed" type="number" min={0} value={metricsForm.failed}
+                  onChange={(e) => setMetricsForm((f) => ({ ...f, failed: Number(e.target.value) }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="m-pending">Pendentes</Label>
+                <Input id="m-pending" type="number" min={0} value={metricsForm.pending}
+                  onChange={(e) => setMetricsForm((f) => ({ ...f, pending: Number(e.target.value) }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="m-speed">Velocidade</Label>
+                <Input id="m-speed" placeholder="ex: 0.1 msg/min" value={metricsForm.speed}
+                  onChange={(e) => setMetricsForm((f) => ({ ...f, speed: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="m-rate">Taxa de Sucesso (%)</Label>
+                <Input id="m-rate" type="number" min={0} max={100} step={0.1} placeholder="ex: 87.5" value={metricsForm.successRate}
+                  onChange={(e) => setMetricsForm((f) => ({ ...f, successRate: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="m-time">Tempo Estimado</Label>
+                <Input id="m-time" placeholder="ex: 2h 30min" value={metricsForm.estimatedTime}
+                  onChange={(e) => setMetricsForm((f) => ({ ...f, estimatedTime: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5 col-span-2">
+                <Label>Status</Label>
+                <Select
+                  value={metricsForm.status}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setMetricsForm((f) => ({ ...f, status: e.target.value }))}
+                >
+                  <option value="ACTIVE">Ativa</option>
+                  <option value="PAUSED">Pausada</option>
+                  <option value="FINISHED">Finalizada</option>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditingBroadcast(null)}>Cancelar</Button>
+              <Button
+                disabled={updateBroadcast.isPending}
+                onClick={() => {
+                  if (!editingBroadcast) return
+                  updateBroadcast.mutate({
+                    broadcastId: editingBroadcast.id,
+                    dto: {
+                      ...metricsForm,
+                      successRate: metricsForm.successRate !== '' ? Number(metricsForm.successRate) : undefined,
+                      speed: metricsForm.speed || undefined,
+                      estimatedTime: metricsForm.estimatedTime || undefined,
+                    },
+                  })
+                }}
+              >
+                {updateBroadcast.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Salvar Métricas
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </Tabs>
     </div>
   )
