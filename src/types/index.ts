@@ -90,6 +90,7 @@ export interface Plan {
   price: number
   billingCycle: string
   active: boolean
+  modules?: string[]
   createdAt: string
   updatedAt: string
 }

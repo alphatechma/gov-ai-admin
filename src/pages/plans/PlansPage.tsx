@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Plus, Pencil, Trash2, Loader2 } from 'lucide-react'
-import type { Plan } from '@/types'
+import type { Plan, SystemModule } from '@/types'
 import { formatCurrency } from '@/lib/utils'
 
 const EMPTY: Omit<Plan, 'id' | 'createdAt' | 'updatedAt'> = {
@@ -18,6 +18,7 @@ const EMPTY: Omit<Plan, 'id' | 'createdAt' | 'updatedAt'> = {
   price: 0,
   billingCycle: 'MONTHLY',
   active: true,
+  modules: [],
 }
 
 export function PlansPage() {
@@ -29,6 +30,11 @@ export function PlansPage() {
   const { data, isLoading } = useQuery({
     queryKey: ['plans'],
     queryFn: () => api.get<Plan[]>('/plans').then((r) => r.data),
+  })
+
+  const { data: modulesData } = useQuery({
+    queryKey: ['system-modules'],
+    queryFn: () => api.get<SystemModule[]>('/modules/system').then((r) => r.data),
   })
 
   const save = useMutation({
@@ -51,7 +57,7 @@ export function PlansPage() {
 
   const openNew = () => { setForm(EMPTY); setEditId(null); setOpen(true) }
   const openEdit = (p: Plan) => {
-    setForm({ name: p.name, maxUsers: p.maxUsers, price: p.price, billingCycle: p.billingCycle, active: p.active })
+    setForm({ name: p.name, maxUsers: p.maxUsers, price: p.price, billingCycle: p.billingCycle, active: p.active, modules: p.modules || [] })
     setEditId(p.id)
     setOpen(true)
   }
@@ -113,7 +119,7 @@ export function PlansPage() {
           <DialogHeader>
             <DialogTitle>{editId ? 'Editar Plano' : 'Novo Plano'}</DialogTitle>
           </DialogHeader>
-          <form onSubmit={(e) => { e.preventDefault(); save.mutate() }} className="space-y-4">
+          <form onSubmit={(e) => { e.preventDefault(); save.mutate() }} className="space-y-4 max-h-[75vh] overflow-y-auto px-1 pb-1">
             <div className="space-y-2">
               <label className="text-sm font-medium">Nome *</label>
               <Input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} required />
@@ -141,6 +147,36 @@ export function PlansPage() {
                 <label className="text-sm font-medium">{form.active ? 'Ativo' : 'Inativo'}</label>
               </div>
             )}
+            <div className="space-y-3 pt-4 border-t">
+              <label className="text-sm font-semibold">Módulos Inclusos</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {(modulesData ?? []).map((mod) => {
+                  const isChecked = form.modules?.includes(mod.key) ?? false;
+                  return (
+                    <div key={mod.key} className="flex items-start gap-3 p-3 rounded-md border bg-card text-card-foreground shadow-sm">
+                      <Switch 
+                        checked={isChecked} 
+                        onCheckedChange={(checked) => {
+                          setForm((p) => {
+                            const current = p.modules || [];
+                            return {
+                              ...p,
+                              modules: checked 
+                                ? [...current, mod.key] 
+                                : current.filter(k => k !== mod.key)
+                            };
+                          });
+                        }} 
+                      />
+                      <div className="space-y-1 leading-none pt-0.5">
+                        <label className="text-sm font-medium">{mod.name}</label>
+                        <p className="text-xs text-muted-foreground mt-1 line-clamp-2" title={mod.description}>{mod.description}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
             <DialogFooter>
               <Button variant="outline" type="button" onClick={() => setOpen(false)}>Cancelar</Button>
               <Button type="submit" disabled={save.isPending}>
