@@ -8,6 +8,8 @@ import {
   Puzzle,
   CreditCard,
   Vote,
+  UserCheck,
+  UserCog,
   X,
   Shield,
 } from 'lucide-react'
@@ -16,6 +18,8 @@ const NAV_ITEMS = [
   { label: 'Dashboard', path: '/', icon: LayoutDashboard },
   { label: 'Tenants', path: '/tenants', icon: Building2 },
   { label: 'Usuários', path: '/users', icon: Users },
+  { label: 'Leads', path: '/leads', icon: UserCheck },
+  { label: 'Assinantes', path: '/subscribers', icon: UserCog },
   { label: 'Dados Eleitorais', path: '/elections', icon: Vote },
   { label: 'Módulos', path: '/modules', icon: Puzzle },
   { label: 'Planos', path: '/plans', icon: CreditCard },

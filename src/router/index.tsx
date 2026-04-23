@@ -15,6 +15,10 @@ import { UserFormPage } from '@/pages/users/UserFormPage'
 import { ModulesPage } from '@/pages/modules/ModulesPage'
 import { PlansPage } from '@/pages/plans/PlansPage'
 import { ElectionsImportPage } from '@/pages/elections/ElectionsImportPage'
+import { LeadsListPage } from '@/pages/leads/LeadsListPage'
+import { LeadFormPage } from '@/pages/leads/LeadFormPage'
+import { SubscribersListPage } from '@/pages/subscribers/SubscribersListPage'
+import { SubscriberFormPage } from '@/pages/subscribers/SubscriberFormPage'
 
 function AuthGuard() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
@@ -56,6 +60,12 @@ export const router = createBrowserRouter([
           { path: '/elections', element: <ElectionsImportPage /> },
           { path: '/modules', element: <ModulesPage /> },
           { path: '/plans', element: <PlansPage /> },
+          { path: '/leads', element: <LeadsListPage /> },
+          { path: '/leads/new', element: <LeadFormPage /> },
+          { path: '/leads/:id/edit', element: <LeadFormPage /> },
+          { path: '/subscribers', element: <SubscribersListPage /> },
+          { path: '/subscribers/new', element: <SubscriberFormPage /> },
+          { path: '/subscribers/:id/edit', element: <SubscriberFormPage /> },
         ],
       },
     ],
