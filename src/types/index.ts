@@ -125,3 +125,62 @@ export interface LoginResponse {
   refreshToken: string
   user: User
 }
+
+export const LeadFunnelStatus = {
+  NOVO: 'NOVO',
+  INTERESSADO: 'INTERESSADO',
+  NEGOCIANDO: 'NEGOCIANDO',
+  FECHADO: 'FECHADO',
+  PERDIDO: 'PERDIDO',
+} as const
+export type LeadFunnelStatus = (typeof LeadFunnelStatus)[keyof typeof LeadFunnelStatus]
+
+export const LEAD_FUNNEL_STATUS_LABELS: Record<LeadFunnelStatus, string> = {
+  NOVO: 'Novo',
+  INTERESSADO: 'Interessado',
+  NEGOCIANDO: 'Negociando',
+  FECHADO: 'Fechado',
+  PERDIDO: 'Perdido',
+}
+
+export interface Lead {
+  id: string
+  name: string
+  email: string
+  phone: string
+  notes: string | null
+  source: string | null
+  funnelStatus: LeadFunnelStatus
+  lastInteraction: string | null
+  nextInteraction: string | null
+  contactAttempts: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface PaginatedLeads {
+  data: Lead[]
+  total: number
+  page: number
+  limit: number
+}
+
+export interface Subscriber {
+  id: string
+  leadId: string
+  planId: string
+  active: boolean
+  startDate: string
+  endDate: string | null
+  lead?: Lead
+  plan?: Plan
+  createdAt: string
+  updatedAt: string
+}
+
+export interface PaginatedSubscribers {
+  data: Subscriber[]
+  total: number
+  page: number
+  limit: number
+}
