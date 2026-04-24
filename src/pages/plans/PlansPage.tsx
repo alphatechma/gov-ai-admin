@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Select } from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -14,6 +15,7 @@ import { formatCurrency } from '@/lib/utils'
 
 const EMPTY: Omit<Plan, 'id' | 'createdAt' | 'updatedAt'> = {
   name: '',
+  description: '',
   maxUsers: 10,
   price: 0,
   billingCycle: 'MONTHLY',
@@ -57,7 +59,7 @@ export function PlansPage() {
 
   const openNew = () => { setForm(EMPTY); setEditId(null); setOpen(true) }
   const openEdit = (p: Plan) => {
-    setForm({ name: p.name, maxUsers: p.maxUsers, price: p.price, billingCycle: p.billingCycle, active: p.active, modules: p.modules || [] })
+    setForm({ name: p.name, description: p.description ?? '', maxUsers: p.maxUsers, price: p.price, billingCycle: p.billingCycle, active: p.active, modules: p.modules || [] })
     setEditId(p.id)
     setOpen(true)
   }
@@ -87,6 +89,9 @@ export function PlansPage() {
                 <Badge variant={p.active ? 'success' : 'secondary'}>{p.active ? 'Ativo' : 'Inativo'}</Badge>
               </CardHeader>
               <CardContent className="space-y-4">
+                {p.description && (
+                  <p className="text-sm text-muted-foreground line-clamp-3">{p.description}</p>
+                )}
                 <div>
                   <p className="text-3xl font-bold">{formatCurrency(p.price)}</p>
                   <p className="text-sm text-muted-foreground">
@@ -124,6 +129,15 @@ export function PlansPage() {
               <label className="text-sm font-medium">Nome *</label>
               <Input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} required />
             </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Descrição</label>
+              <Textarea
+                value={form.description ?? ''}
+                onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
+                placeholder="Texto curto exibido no card do plano na landing page"
+                rows={3}
+              />
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Preço *</label>
@@ -151,22 +165,22 @@ export function PlansPage() {
               <label className="text-sm font-semibold">Módulos Inclusos</label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {(modulesData ?? []).map((mod) => {
-                  const isChecked = form.modules?.includes(mod.key) ?? false;
+                  const isChecked = form.modules?.includes(mod.name) ?? false;
                   return (
                     <div key={mod.key} className="flex items-start gap-3 p-3 rounded-md border bg-card text-card-foreground shadow-sm">
-                      <Switch 
-                        checked={isChecked} 
+                      <Switch
+                        checked={isChecked}
                         onCheckedChange={(checked) => {
                           setForm((p) => {
                             const current = p.modules || [];
                             return {
                               ...p,
-                              modules: checked 
-                                ? [...current, mod.key] 
-                                : current.filter(k => k !== mod.key)
+                              modules: checked
+                                ? [...current, mod.name]
+                                : current.filter(n => n !== mod.name)
                             };
                           });
-                        }} 
+                        }}
                       />
                       <div className="space-y-1 leading-none pt-0.5">
                         <label className="text-sm font-medium">{mod.name}</label>
