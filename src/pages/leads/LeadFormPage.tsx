@@ -8,7 +8,7 @@ import { Select } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ArrowLeft, Loader2, Save, Trash2 } from 'lucide-react'
-import type { Lead } from '@/types'
+import type { Lead, Plan } from '@/types'
 import { LeadFunnelStatus, LEAD_FUNNEL_STATUS_LABELS } from '@/types'
 
 function toDateTimeInput(value: string | null): string {
@@ -35,12 +35,18 @@ export function LeadFormPage() {
     lastInteraction: '',
     nextInteraction: '',
     contactAttempts: 0,
+    planId: '',
   })
 
   const lead = useQuery({
     queryKey: ['lead', id],
     queryFn: () => api.get<Lead>(`/leads/${id}`).then((r) => r.data),
     enabled: isEdit,
+  })
+
+  const plans = useQuery({
+    queryKey: ['plans'],
+    queryFn: () => api.get<Plan[]>('/plans').then((r) => r.data),
   })
 
   useEffect(() => {
@@ -56,6 +62,7 @@ export function LeadFormPage() {
         lastInteraction: toDateTimeInput(l.lastInteraction),
         nextInteraction: toDateTimeInput(l.nextInteraction),
         contactAttempts: l.contactAttempts ?? 0,
+        planId: l.planId ?? '',
       })
     }
   }, [lead.data])
@@ -76,6 +83,7 @@ export function LeadFormPage() {
         nextInteraction: form.nextInteraction
           ? new Date(form.nextInteraction).toISOString()
           : null,
+        planId: form.planId || null,
       }
       return isEdit
         ? api.patch(`/leads/${id}`, payload)
@@ -189,6 +197,20 @@ export function LeadFormPage() {
                 {Object.values(LeadFunnelStatus).map((s) => (
                   <option key={s} value={s}>
                     {LEAD_FUNNEL_STATUS_LABELS[s]}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Plano</label>
+              <Select
+                value={form.planId}
+                onChange={(e) => set('planId', e.target.value)}
+              >
+                <option value="">Nenhum</option>
+                {(plans.data ?? []).map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
                   </option>
                 ))}
               </Select>

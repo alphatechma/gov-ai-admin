@@ -8,7 +8,7 @@ import { Select } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Plus, Pencil, Trash2 } from 'lucide-react'
-import type { PaginatedLeads } from '@/types'
+import type { PaginatedLeads, Plan } from '@/types'
 import { LeadFunnelStatus, LEAD_FUNNEL_STATUS_LABELS } from '@/types'
 import { formatDate } from '@/lib/utils'
 
@@ -30,10 +30,16 @@ export function LeadsListPage() {
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
   const [funnelStatus, setFunnelStatus] = useState<LeadFunnelStatus | ''>('')
+  const [planId, setPlanId] = useState('')
   const limit = 50
 
+  const plans = useQuery({
+    queryKey: ['plans'],
+    queryFn: () => api.get<Plan[]>('/plans').then((r) => r.data),
+  })
+
   const { data, isLoading } = useQuery({
-    queryKey: ['leads', page, name, email, phone, funnelStatus],
+    queryKey: ['leads', page, name, email, phone, funnelStatus, planId],
     queryFn: () =>
       api
         .get<PaginatedLeads>('/leads', {
@@ -44,6 +50,7 @@ export function LeadsListPage() {
             email: email || undefined,
             phone: phone || undefined,
             funnelStatus: funnelStatus || undefined,
+            planId: planId || undefined,
           },
         })
         .then((r) => r.data),
@@ -74,7 +81,7 @@ export function LeadsListPage() {
         </Button>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <div className="space-y-1">
           <label className="text-xs font-medium text-muted-foreground">Nome</label>
           <Input
@@ -127,6 +134,23 @@ export function LeadsListPage() {
             ))}
           </Select>
         </div>
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-muted-foreground">Plano</label>
+          <Select
+            value={planId}
+            onChange={(e) => {
+              setPlanId(e.target.value)
+              resetPage()
+            }}
+          >
+            <option value="">Todos</option>
+            {(plans.data ?? []).map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </Select>
+        </div>
       </div>
 
       {isLoading ? (
@@ -144,6 +168,7 @@ export function LeadsListPage() {
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">E-mail</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Telefone</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Plano</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Origem</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Última interação</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Próxima interação</th>
@@ -162,6 +187,7 @@ export function LeadsListPage() {
                       {LEAD_FUNNEL_STATUS_LABELS[l.funnelStatus]}
                     </Badge>
                   </td>
+                  <td className="px-4 py-3 text-muted-foreground">{l.plan?.name ?? '—'}</td>
                   <td className="px-4 py-3 text-muted-foreground">{l.source ?? '—'}</td>
                   <td className="px-4 py-3 text-muted-foreground">
                     {l.lastInteraction ? formatDate(l.lastInteraction) : '—'}
@@ -192,7 +218,7 @@ export function LeadsListPage() {
               ))}
               {(data?.data ?? []).length === 0 && (
                 <tr>
-                  <td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">
+                  <td colSpan={10} className="px-4 py-8 text-center text-muted-foreground">
                     Nenhum lead encontrado
                   </td>
                 </tr>

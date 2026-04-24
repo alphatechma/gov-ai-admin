@@ -155,6 +155,8 @@ export interface Lead {
   lastInteraction: string | null
   nextInteraction: string | null
   contactAttempts: number
+  planId: string | null
+  plan: { id: string; name: string } | null
   createdAt: string
   updatedAt: string
 }
