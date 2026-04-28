@@ -86,6 +86,7 @@ export interface User {
 export interface Plan {
   id: string
   name: string
+  description?: string | null
   maxUsers: number
   price: number
   billingCycle: string
@@ -154,6 +155,8 @@ export interface Lead {
   lastInteraction: string | null
   nextInteraction: string | null
   contactAttempts: number
+  planId: string | null
+  plan: { id: string; name: string } | null
   createdAt: string
   updatedAt: string
 }
