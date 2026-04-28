@@ -8,7 +8,7 @@ import { Select } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ArrowLeft, Loader2, Save, Trash2 } from 'lucide-react'
-import type { Subscriber, PaginatedLeads, Plan } from '@/types'
+import type { Subscriber, PaginatedLeads, Plan, User } from '@/types'
 
 function toDateTimeInput(value: string | null): string {
   if (!value) return ''
@@ -30,6 +30,7 @@ export function SubscriberFormPage() {
     leadEmail: '',
     leadPhone: '',
     planId: '',
+    userId: '',
     active: true,
     startDate: '',
     endDate: '',
@@ -58,6 +59,11 @@ export function SubscriberFormPage() {
     queryFn: () => api.get<Plan[]>('/plans').then((r) => r.data),
   })
 
+  const users = useQuery({
+    queryKey: ['users'],
+    queryFn: () => api.get<User[]>('/users').then((r) => r.data),
+  })
+
   useEffect(() => {
     if (subscriber.data) {
       const a = subscriber.data
@@ -67,6 +73,7 @@ export function SubscriberFormPage() {
         leadEmail: a.lead?.email ?? '',
         leadPhone: a.lead?.phone ?? '',
         planId: a.planId,
+        userId: a.userId ?? '',
         active: a.active,
         startDate: toDateTimeInput(a.startDate),
         endDate: toDateTimeInput(a.endDate),
@@ -78,6 +85,7 @@ export function SubscriberFormPage() {
     mutationFn: async () => {
       const payload: Record<string, unknown> = {
         planId: form.planId,
+        userId: form.userId || null,
         active: form.active,
         startDate: form.startDate
           ? new Date(form.startDate).toISOString()
@@ -227,6 +235,20 @@ export function SubscriberFormPage() {
                 {(plans.data ?? []).map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Usuário</label>
+              <Select
+                value={form.userId}
+                onChange={(e) => set('userId', e.target.value)}
+              >
+                <option value="">Sem usuário vinculado</option>
+                {(users.data ?? []).map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.name} - {u.email}
                   </option>
                 ))}
               </Select>

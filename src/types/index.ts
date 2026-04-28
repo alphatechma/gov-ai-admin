@@ -172,11 +172,13 @@ export interface Subscriber {
   id: string
   leadId: string
   planId: string
+  userId: string | null
   active: boolean
   startDate: string
   endDate: string | null
   lead?: Lead
   plan?: Plan
+  user?: User | null
   createdAt: string
   updatedAt: string
 }
