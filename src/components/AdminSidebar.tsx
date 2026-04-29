@@ -10,6 +10,7 @@ import {
   Vote,
   UserCheck,
   UserCog,
+  Link2,
   X,
   Shield,
 } from 'lucide-react'
@@ -19,6 +20,7 @@ const NAV_ITEMS = [
   { label: 'Tenants', path: '/tenants', icon: Building2 },
   { label: 'Usuários', path: '/users', icon: Users },
   { label: 'Leads', path: '/leads', icon: UserCheck },
+  { label: 'Pagamentos', path: '/payment-links', icon: Link2 },
   { label: 'Assinantes', path: '/subscribers', icon: UserCog },
   { label: 'Dados Eleitorais', path: '/elections', icon: Vote },
   { label: 'Módulos', path: '/modules', icon: Puzzle },

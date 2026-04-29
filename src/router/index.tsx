@@ -19,6 +19,7 @@ import { LeadsListPage } from '@/pages/leads/LeadsListPage'
 import { LeadFormPage } from '@/pages/leads/LeadFormPage'
 import { SubscribersListPage } from '@/pages/subscribers/SubscribersListPage'
 import { SubscriberFormPage } from '@/pages/subscribers/SubscriberFormPage'
+import { PaymentLinksPage } from '@/pages/payment-links/PaymentLinksPage'
 
 function AuthGuard() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
@@ -63,6 +64,7 @@ export const router = createBrowserRouter([
           { path: '/leads', element: <LeadsListPage /> },
           { path: '/leads/new', element: <LeadFormPage /> },
           { path: '/leads/:id/edit', element: <LeadFormPage /> },
+          { path: '/payment-links', element: <PaymentLinksPage /> },
           { path: '/subscribers', element: <SubscribersListPage /> },
           { path: '/subscribers/new', element: <SubscriberFormPage /> },
           { path: '/subscribers/:id/edit', element: <SubscriberFormPage /> },

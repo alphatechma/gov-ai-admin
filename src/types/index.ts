@@ -189,3 +189,65 @@ export interface PaginatedSubscribers {
   page: number
   limit: number
 }
+
+export const PaymentType = {
+  ONE_TIME: 'ONE_TIME',
+  RECURRING: 'RECURRING',
+} as const
+export type PaymentType = (typeof PaymentType)[keyof typeof PaymentType]
+
+export const PAYMENT_TYPE_LABELS: Record<PaymentType, string> = {
+  ONE_TIME: 'Pagamento único',
+  RECURRING: 'Pagamento recorrente',
+}
+
+export const CheckoutStatus = {
+  PENDING: 'PENDING',
+  PAID: 'PAID',
+  FAILED: 'FAILED',
+  CANCELLED: 'CANCELLED',
+  EXPIRED: 'EXPIRED',
+} as const
+export type CheckoutStatus = (typeof CheckoutStatus)[keyof typeof CheckoutStatus]
+
+export const CHECKOUT_STATUS_LABELS: Record<CheckoutStatus, string> = {
+  PENDING: 'Aguardando pagamento',
+  PAID: 'Pago',
+  FAILED: 'Falhou',
+  CANCELLED: 'Cancelado',
+  EXPIRED: 'Expirado',
+}
+
+export interface PaymentLinkResponse {
+  checkoutSessionId: string
+  paymentType: PaymentType
+  mpResourceType: 'PREFERENCE' | 'PREAPPROVAL'
+  mpResourceId: string
+  paymentUrl: string
+  status: CheckoutStatus
+  amounts: {
+    adhesion: number
+    plan: number
+    firstCharge: number
+    recurring: number | null
+    currency: 'BRL'
+  }
+  lead: { id: string; name: string; email: string; phone: string }
+  plan: { id: string; name: string; billingCycle: string }
+  createdAt: string
+}
+
+export interface PaymentLinkListItem {
+  checkoutSessionId: string
+  paymentType: PaymentType
+  mpResourceType: 'PREFERENCE' | 'PREAPPROVAL'
+  paymentUrl: string
+  status: CheckoutStatus
+  mpStatus: string | null
+  firstChargeAmount: number
+  recurringAmount: number | null
+  paidAt: string | null
+  createdAt: string
+  lead: { id: string; name: string; email: string; phone: string } | null
+  plan: { id: string; name: string; billingCycle: string } | null
+}
