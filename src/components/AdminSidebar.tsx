@@ -24,6 +24,7 @@ const NAV_ITEMS = [
   { label: 'Assinantes', path: '/subscribers', icon: UserCog },
   { label: 'Dados Eleitorais', path: '/elections', icon: Vote },
   { label: 'Módulos', path: '/modules', icon: Puzzle },
+  { label: 'Permissões', path: '/permissions', icon: Shield },
   { label: 'Planos', path: '/plans', icon: CreditCard },
 ]
 

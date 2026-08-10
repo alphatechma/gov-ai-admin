@@ -13,6 +13,7 @@ import { TenantDetailPage } from '@/pages/tenants/TenantDetailPage'
 import { UsersListPage } from '@/pages/users/UsersListPage'
 import { UserFormPage } from '@/pages/users/UserFormPage'
 import { ModulesPage } from '@/pages/modules/ModulesPage'
+import { RolePermissionsPage } from '@/pages/permissions/RolePermissionsPage'
 import { PlansPage } from '@/pages/plans/PlansPage'
 import { ElectionsImportPage } from '@/pages/elections/ElectionsImportPage'
 import { LeadsListPage } from '@/pages/leads/LeadsListPage'
@@ -60,6 +61,7 @@ export const router = createBrowserRouter([
           { path: '/users/:id/edit', element: <UserFormPage /> },
           { path: '/elections', element: <ElectionsImportPage /> },
           { path: '/modules', element: <ModulesPage /> },
+          { path: '/permissions', element: <RolePermissionsPage /> },
           { path: '/plans', element: <PlansPage /> },
           { path: '/leads', element: <LeadsListPage /> },
           { path: '/leads/new', element: <LeadFormPage /> },
